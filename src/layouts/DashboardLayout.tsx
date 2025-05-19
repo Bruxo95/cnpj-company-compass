@@ -25,6 +25,10 @@ const DashboardLayout = () => {
     }`;
   };
 
+  // Get user display name from metadata or fallback to email
+  const userDisplayName = user?.user_metadata?.name || user?.email?.split('@')[0] || 'User';
+  const userEmail = user?.email || '';
+
   return (
     <div className="flex min-h-screen">
       {/* Sidebar */}
@@ -63,8 +67,8 @@ const DashboardLayout = () => {
           <div className="p-4 border-t">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <p className="font-medium">{user?.name}</p>
-                <p className="text-sm text-gray-500">{user?.email}</p>
+                <p className="font-medium">{userDisplayName}</p>
+                <p className="text-sm text-gray-500">{userEmail}</p>
               </div>
             </div>
             <Button 
