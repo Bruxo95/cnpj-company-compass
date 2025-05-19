@@ -30,7 +30,7 @@ jobs:
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
-          github_token: ${{ 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 }}
+          github_token: ${{ secrets.GH_PAT }}
           publish_dir: ./dist
           cname: techpos.com.br
           force_orphan: true
