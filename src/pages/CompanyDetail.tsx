@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useToast } from "@/components/ui/use-toast";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +8,8 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Building, ChevronLeft, Download, MapPin, Users, Info, BarChart } from 'lucide-react';
 import { formatCNPJ, mockCompanyDetail } from '@/utils/mockData';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 const CompanyDetail = () => {
   const { cnpj = '' } = useParams();
@@ -15,6 +17,8 @@ const CompanyDetail = () => {
   const { toast } = useToast();
   const [companyData, setCompanyData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     // Fetch company data - in a real app this would call your API
@@ -52,12 +56,73 @@ const CompanyDetail = () => {
     }
   }, [cnpj, navigate, toast]);
 
-  const handleExportPDF = () => {
+  const handleExportPDF = async () => {
+    if (!contentRef.current) return;
+    
+    setIsExporting(true);
     toast({
       title: "Exportação iniciada",
-      description: "O download do PDF começará em instantes.",
+      description: "Preparando o PDF, aguarde um momento...",
     });
-    // In a real app, this would generate and download a PDF file
+
+    try {
+      // Create a temporary div with only the content we want to export
+      const exportContainer = document.createElement('div');
+      exportContainer.style.width = '800px';
+      exportContainer.style.padding = '20px';
+      exportContainer.style.backgroundColor = 'white';
+      
+      // Clone the content
+      const contentClone = contentRef.current.cloneNode(true) as HTMLElement;
+      
+      // Remove any buttons or interactive elements we don't want in the PDF
+      const buttonsToRemove = contentClone.querySelectorAll('button');
+      buttonsToRemove.forEach(button => button.remove());
+      
+      exportContainer.appendChild(contentClone);
+      
+      // Temporarily add to document for rendering but make it invisible
+      exportContainer.style.position = 'absolute';
+      exportContainer.style.left = '-9999px';
+      document.body.appendChild(exportContainer);
+      
+      // Generate PDF
+      const canvas = await html2canvas(exportContainer, {
+        scale: 1,
+        useCORS: true,
+        logging: false
+      });
+      
+      // Remove the temporary element
+      document.body.removeChild(exportContainer);
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const imgX = (pdfWidth - imgWidth * ratio) / 2;
+      const imgY = 20;
+      
+      pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+      pdf.save(`empresa_${companyData.cnpj}.pdf`);
+      
+      toast({
+        title: "PDF gerado com sucesso",
+        description: "O download foi iniciado automaticamente.",
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        variant: "destructive",
+        title: "Erro na exportação",
+        description: "Não foi possível gerar o PDF. Tente novamente.",
+      });
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   if (isLoading) {
@@ -73,7 +138,7 @@ const CompanyDetail = () => {
   }
 
   return (
-    <div>
+    <div ref={contentRef}>
       {/* Header */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
         <div>
@@ -93,9 +158,19 @@ const CompanyDetail = () => {
           variant="outline" 
           className="flex items-center gap-1"
           onClick={handleExportPDF}
+          disabled={isExporting}
         >
-          <Download className="h-4 w-4" />
-          Exportar PDF
+          {isExporting ? (
+            <>
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"></div>
+              Exportando...
+            </>
+          ) : (
+            <>
+              <Download className="h-4 w-4" />
+              Exportar PDF
+            </>
+          )}
         </Button>
       </div>
 
