@@ -8,7 +8,7 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { Building, ChevronLeft, Download, MapPin, Users, Info, BarChart } from 'lucide-react';
 import { formatCNPJ, mockCompanyDetail } from '@/utils/mockData';
-import jsPDF from 'jspdf';
+import { jsPDF } from 'jspdf';
 import html2canvas from 'html2canvas';
 
 const CompanyDetail = () => {
